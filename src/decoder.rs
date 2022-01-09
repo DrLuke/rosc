@@ -3,10 +3,11 @@ use crate::types::{OscArray, OscBundle, OscColor, OscMessage, OscMidiMessage, Os
 use crate::alloc::{string::{String, ToString}, vec::Vec};
 
 use nom::Offset;
-use nom::sequence::terminated;
-use nom::bytes::complete::{take, take_till};
-use nom::combinator::{map, map_parser};
-use nom::multi::many0;
+use nom::sequence::{preceded, terminated};
+use nom::bytes::complete::{take, take_till, take_till1};
+use nom::character::complete::char;
+use nom::combinator::{all_consuming, map, map_parser};
+use nom::multi::{many0, many1};
 use nom::number::complete::{be_f32, be_f64, be_i32, be_i64, be_u32};
 use nom::{IResult,combinator::map_res,sequence::tuple};
 
@@ -75,11 +76,26 @@ fn decode_packet<'a>(
     }
 }
 
+fn validate_address(address: &str) -> Result<(), nom::Err<OscError>> {
+    // Split address into parts seperated by '/'
+    // Then check if each part itself is valid with parse_address_part
+    // If any address part returns an error,
+    all_consuming(many1(parse_address_part))(address)
+            .map_err(|_| nom::Err::Error(OscError::BadAddress("bad address".to_string())))?;
+    Ok(())
+}
+
+fn parse_address_part(input: &str) -> IResult<&str, &str> {
+    preceded(char('/'), take_till1(|c| " \t\r\n#*,/?[]{}".contains(c)))(input)
+}
+
 fn decode_message<'a>(
     addr: String,
     input: &'a [u8],
     original_input: &'a[u8],
 ) -> IResult<&'a [u8], OscPacket, OscError> {
+    validate_address(addr.as_str())?;
+
     let (input, type_tags) = read_osc_string(input, original_input)?;
 
     if type_tags.len() > 1 {
