@@ -20,7 +20,6 @@ fn test_matcher() {
             .expect("should not match"),
         false
     );
-    matcher.match_address("invalid_address").expect_err("should fail because address does not start with a slash");
 }
 
 #[cfg(feature = "std")]
@@ -33,18 +32,4 @@ fn test_bad_address_pattern() {
     assert_eq!(Matcher::new("////").unwrap_err().to_string(), expected_err);
     assert_eq!(Matcher::new("/{unclosed,alternative").unwrap_err().to_string(), expected_err);
     assert_eq!(Matcher::new("/unclosed/[range-").unwrap_err().to_string(), expected_err);
-}
-
-#[cfg(feature = "std")]
-#[test]
-fn test_bad_address() {
-    let matcher = Matcher::new("/does-not-matter").expect("Matcher::new");
-    let expected_err = "bad OSC address: bad address";
-    assert_eq!(matcher.match_address("").unwrap_err().to_string(), expected_err);
-    assert_eq!(matcher.match_address("/").unwrap_err().to_string(), expected_err);
-    assert_eq!(matcher.match_address("/contains/wildcards?").unwrap_err().to_string(), expected_err);
-    assert_eq!(matcher.match_address("/contains/wildcards*").unwrap_err().to_string(), expected_err);
-    assert_eq!(matcher.match_address("/contains/ranges[a-z]").unwrap_err().to_string(), expected_err);
-    assert_eq!(matcher.match_address("/contains/ranges[!a-z]").unwrap_err().to_string(), expected_err);
-    assert_eq!(matcher.match_address("/{contains,alternative}").unwrap_err().to_string(), expected_err);
 }

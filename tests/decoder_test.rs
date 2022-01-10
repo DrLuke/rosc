@@ -160,3 +160,21 @@ fn test_decode_udp_args() {
         _ => panic!("Expected an OSC message!"),
     }
 }
+
+fn generate_osc_message(addr: &str) -> Vec<u8>{
+    let encoded_addr = encoder::encode_string(addr);
+    let type_tags = encoder::encode_string(",");
+    encoded_addr.into_iter().chain(type_tags.into_iter()).collect()
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_bad_address() {
+    let expected_err = "Parsing Error: BadAddress(\"bad address\")";
+    assert_eq!(decoder::decode_udp(&generate_osc_message("/")).unwrap_err().to_string(), expected_err);
+    assert_eq!(decoder::decode_udp(&generate_osc_message("/contains/wildcards?")).unwrap_err().to_string(), expected_err);
+    assert_eq!(decoder::decode_udp(&generate_osc_message("/contains/wildcards*")).unwrap_err().to_string(), expected_err);
+    assert_eq!(decoder::decode_udp(&generate_osc_message("/contains/ranges[a-z]")).unwrap_err().to_string(), expected_err);
+    assert_eq!(decoder::decode_udp(&generate_osc_message("/contains/ranges[!a-z]")).unwrap_err().to_string(), expected_err);
+    assert_eq!(decoder::decode_udp(&generate_osc_message("/{contains,alternative}")).unwrap_err().to_string(), expected_err);
+}
