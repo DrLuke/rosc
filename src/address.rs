@@ -11,6 +11,7 @@ use nom::multi::many1;
 use nom::sequence::{delimited, preceded};
 use nom::{IResult, Parser};
 use regex::Regex;
+use OscMessage;
 
 /// With a Matcher OSC method addresses can be [matched](Matcher::match_address) against an OSC address pattern.
 /// Refer to the OSC specification for details about OSC address spaces: <http://opensoundcontrol.org/spec-1_0.html#osc-address-spaces-and-osc-addresses>
@@ -50,9 +51,8 @@ impl Matcher {
         Ok(Matcher { res })
     }
 
-    /// Match an OSC address against an address pattern.
+    /// Match an OSC message address against an address pattern.
     /// If the address matches the pattern the result will be `true`, otherwise `false`.
-    /// An error is returned if the given OSC address is not valid.
     ///
     /// A valid OSC address begins with a `/` and contains at least a method name, e.g. `/tempo`.
     /// Despite OSC address patterns a plain address must not include any of the following characters `#*,/?[]{}`.
@@ -61,23 +61,24 @@ impl Matcher {
     ///
     /// ```
     /// use rosc::address::Matcher;
+    /// use rosc::OscMessage;
     ///
     /// let matcher = Matcher::new("/oscillator/[0-9]/{frequency,phase}").unwrap();
-    /// assert!(matcher.match_address("/oscillator/1/frequency").unwrap());
-    /// assert!(matcher.match_address("/oscillator/8/phase").unwrap());
-    /// assert_eq!(matcher.match_address("/oscillator/4/detune").unwrap(), false);
+    /// assert!(matcher.match_message(&OscMessage{addr:"/oscillator/1/frequency".to_string(), args: vec![]}));
+    /// assert!(matcher.match_message(&OscMessage{addr:"/oscillator/8/phase".to_string(), args: vec![]}));
+    /// assert_eq!(matcher.match_message(&OscMessage{addr:"/oscillator/4/detune".to_string(), args: vec![]}), false);
     /// ```
-    pub fn match_address(&self, address: &str) -> Result<bool, OscError> {
-        let (_, parts) = all_consuming(many1(parse_address_part))(address)
-            .map_err(|_| OscError::BadAddress("bad address".to_string()))?;
+    pub fn match_message(&self, message: &OscMessage) -> bool {
+        let (_, parts) = all_consuming(many1(parse_address_part))(message.addr.as_str())
+            .expect("Address must be valid");
         if parts.len() != self.res.len() {
-            return Ok(false);
+            return false;
         }
-        Ok(self
+        self
             .res
             .iter()
             .zip(parts)
-            .all(|(re, part)| re.is_match(part)))
+            .all(|(re, part)| re.is_match(part))
     }
 }
 

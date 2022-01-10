@@ -2,6 +2,7 @@ extern crate rosc;
 
 #[cfg(feature = "std")]
 use rosc::address::Matcher;
+use rosc::OscMessage;
 
 #[cfg(feature = "std")]
 #[test]
@@ -10,14 +11,22 @@ fn test_matcher() {
         .expect("Matcher::new");
     assert_eq!(
         matcher
-            .match_address("/oscillator/1/something/preXpost/phase/xy")
-            .expect("should match"),
+            .match_message(
+                &OscMessage {
+                    addr: "/oscillator/1/something/preXpost/phase/xy".to_string(),
+                    args: vec![],
+                }
+            ),
         true
     );
     assert_eq!(
         matcher
-            .match_address("/oscillator/1/something/pre1post/phase/xy")
-            .expect("should not match"),
+            .match_message(
+                &OscMessage {
+                    addr: "/oscillator/1/something/pre1post/phase/xy".to_string(),
+                    args: vec![],
+                }
+            ),
         false
     );
 }
